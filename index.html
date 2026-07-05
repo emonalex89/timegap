@@ -1,1 +1,147 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>বুলবুল ভাইয়ের অফারওয়াল সেফটি টাইমার</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; background-color: #121212; color: #fff; text-align: center; padding: 20px; }
+        h1 { color: #4CAF50; font-size: 24px; }
+        .status-box { background: #1e1e1e; padding: 20px; border-radius: 10px; margin: 20px auto; max-width: 400px; border: 2px solid #333; }
+        #instruction { font-size: 20px; font-weight: bold; color: #ffeb3b; margin-bottom: 10px; }
+        #countdown { font-size: 35px; font-weight: bold; color: #ff5722; }
+        .level-container { max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; height: 350px; overflow-y: auto; padding: 10px; background: #1a1a1a; border-radius: 8px; }
+        .level-row { display: flex; justify-content: space-between; align-items: center; background: #2d2d2d; padding: 10px 15px; border-radius: 5px; }
+        .level-row.done { background: #1b5e20; opacity: 0.7; }
+        .level-row.done button { display: none; }
+        button { background: #4CAF50; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        .break-alert { background: #d32f2f !important; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
 
+    <h1>🎯 Fusion Blocks অ্যান্টি-ব্যান টাইমার</h1>
+    
+    <div class="status-box">
+        <div id="instruction">শুরু করতে নিচের লেভেলের "Complete" চাপুন</div>
+        <div id="countdown">00:00</div>
+    </div>
+
+    <div class="level-container" id="levelsBox">
+        <!-- জাভাস্ক্রিপ্ট দিয়ে লেভেল তৈরি হবে -->
+    </div>
+
+    <!-- অডিও অ্যালার্ম (অনলাইন থেকে ডিফল্ট বিপ সাউন্ড) -->
+    <audio id="alarmSound" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto"></audio>
+
+<script>
+    // লেভেল ভিত্তিক সেফ টাইম গ্যাপ (সেকেন্ডে কনভার্ট করা)
+    function getSafeTimeInSeconds(level) {
+        if (level >= 1 && level <= 20) return 95;     // ১.৫+ মিনিট
+        if (level >= 21 && level <= 50) return 190;   // ৩+ মিনিট
+        if (level >= 51 && level <= 80) return 310;   // ৫+ মিনিট
+        if (level >= 81 && level <= 120) return 430;  // ৭+ মিনিট
+        return 610;                                   // ১০+ মিনিট
+    </script>
+</body>
+</html>
+
+// স্ক্রিপ্ট কন্টিনিউয়েশন...
+    const totalLevels = 150;
+    const levelsBox = document.getElementById('levelsBox');
+    const instruction = document.getElementById('instruction');
+    const countdownDisplay = document.getElementById('countdown');
+    const alarm = document.getElementById('alarmSound');
+    let timerInterval;
+
+    // লেভেল লিস্ট জেনারেট করা
+    for (let i = 1; i <= totalLevels; i++) {
+        let row = document.createElement('div');
+        row.className = 'level-row';
+        row.id = `row-${i}`;
+        row.innerHTML = `
+            <span>লেভেল ${i} (সেফ টাইম: ${Math.round(getSafeTimeInSeconds(i)/60)} মি.)</span>
+            <button id="btn-${i}" onclick="startTimer(${i})">Complete</button>
+        `;
+        levelsBox.appendChild(row);
+    }
+
+    function startTimer(level) {
+        // সব বাটন লক করা যেন একসাথে ২টা লেভেল ক্লিক না হয়
+        toggleButtons(true);
+        
+        let timeLeft = getSafeTimeInSeconds(level);
+        instruction.innerText = `লেভেল ${level} হ্যাক কাউন্ট হচ্ছে। অপেক্ষা করুন...`;
+        instruction.style.color = "#ffeb3b";
+
+        timerInterval = setInterval(() => {
+            let minutes = Math.floor(timeLeft / 60);
+            let seconds = timeLeft % 60;
+            countdownDisplay.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                playAlarm();
+                
+                // বর্তমান লেভেল কমপ্লিট মার্ক করা
+                document.getElementById(`row-${level}`).classList.add('done');
+                
+                // পরবর্তী লেভেলের নির্দেশ
+                let nextLevel = level + 1;
+                instruction.innerText = `বুলবুল ভাই, এবার লেভেল ${nextLevel} কমপ্লিট করো!`;
+                instruction.style.color = "#4CAF50";
+                countdownDisplay.innerText = "READY!";
+                
+                // বিশেষ ব্রেক চেক
+                checkSpecialBreak(level, nextLevel);
+            }
+            timeLeft--;
+        }, 1000);
+    }
+
+    function toggleButtons(status) {
+        const buttons = document.querySelectorAll('.level-container button');
+        buttons.forEach(btn => btn.disabled = status);
+    }
+
+    function playAlarm() {
+        alarm.play().catch(e => console.log("Audio play error: ", e));
+        setTimeout(() => { alarm.pause(); alarm.currentTime = 0; }, 4000); // ৪ সেকেন্ড পর অ্যালার্ম বন্ধ
+    }
+
+    function checkSpecialBreak(currentLevel, nextLevel) {
+        let breakTime = 0;
+        let msg = "";
+
+        if (currentLevel === 20) { breakTime = 15; msg = "২০ লেভেল শেষ! ১৫ মিনিটের ব্রেক দিন।"; }
+        else if (currentLevel === 50) { breakTime = 30; msg = "৫০ লেভেল শেষ! ৩০ মিনিটের বড় ব্রেক দিন।"; }
+        else if (currentLevel === 80) { breakTime = 60; msg = "৮০ লেভেল শেষ! ১ ঘণ্টার মেইন ব্রেক দিন।"; }
+        else if (currentLevel === 120) { breakTime = 120; msg = "১২০ লেভেল শেষ! ২ ঘণ্টার লম্বা ব্রেক দিন।"; }
+
+        if (breakTime > 0) {
+            toggleButtons(true); // বাটন লকড থাকবে
+            instruction.innerText = `⚠️ ${msg}`;
+            instruction.style.color = "#ff1744";
+            let breakSeconds = breakTime * 60;
+            
+            let breakInterval = setInterval(() => {
+                let m = Math.floor(breakSeconds / 60);
+                let s = breakSeconds % 60;
+                countdownDisplay.innerText = `ব্রেক: ${m}:${s}`;
+                
+                if (breakSeconds <= 0) {
+                    clearInterval(breakInterval);
+                    toggleButtons(false);
+                    instruction.innerText = `বুলবুল ভাই, এবার লেভেল ${nextLevel} কমপ্লিট করো!`;
+                    instruction.style.color = "#4CAF50";
+                    countdownDisplay.innerText = "READY!";
+                }
+                breakSeconds--;
+            }, 1000);
+        } else {
+            toggleButtons(false); // সাধারণ লেভেলে বাটন আনলক হবে
+        }
+    }
+</script>
